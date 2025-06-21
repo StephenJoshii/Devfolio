@@ -17,11 +17,15 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+app.UseDefaultFiles();
+
+app.UseStaticFiles(); // <-- ADD THIS LINE
+
+if (app.Environment.IsDevelopment())
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// A simple test page to make sure the server is running.
-app.MapGet("/", () => "Welcome to DevFolio API!");
 // It will listen for GET requests at "/api/projects".
 app.MapGet("/api/projects", async (ProjectDbContext db) =>
 {
