@@ -1,126 +1,150 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using System.Security.Claims;
 
-
-// All the code that runs goes here, at the top.
-
+// Setting up all my services.
 var builder = WebApplication.CreateBuilder(args);
 
-// This tells the app where to find my database file (info is in appsettings.json).
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-// Connects our app to the SQLite database.
 builder.Services.AddDbContext<ProjectDbContext>(options =>
     options.UseSqlite(connectionString));
-
+builder.Services.AddAuthorization();
+builder.Services.AddIdentityApiEndpoints<IdentityUser>()
+    .AddEntityFrameworkStores<ProjectDbContext>();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("cookieAuth", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        Name = ".AspNetCore.Identity.Application",
+        In = ParameterLocation.Cookie
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "cookieAuth"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 var app = builder.Build();
 
-app.UseDefaultFiles();
-
-app.UseStaticFiles(); // <-- ADD THIS LINE
-
+// Configure the request pipeline. Order matters here.
 if (app.Environment.IsDevelopment())
-
-app.UseSwagger();
-app.UseSwaggerUI();
-
-// It will listen for GET requests at "/api/projects".
-app.MapGet("/api/projects", async (ProjectDbContext db) =>
 {
-    // go into the database, find the Projects table, and get all of them as a list.
-    var projects = await db.Projects.ToListAsync();
-    // send back the list of projects with a 200 OK success status.
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+app.UseAuthorization();
+app.MapIdentityApi<IdentityUser>();
+
+// --- My API Endpoints ---
+
+// GET projects for a specific user.
+app.MapGet("/api/users/{userId}/projects", async (string userId, ProjectDbContext db) =>
+{
+    var projects = await db.Projects
+        .Where(p => p.UserId == userId)
+        .ToListAsync();
+        
     return Results.Ok(projects);
 });
 
-// A POST request is used when you want to create a new item.
-app.MapPost("/api/projects", async (Project newProject, ProjectDbContext db) =>
+// POST a new project, assigned to the logged-in user.
+app.MapPost("/api/projects", async (Project newProject, ProjectDbContext db, ClaimsPrincipal user) =>
 {
-    // 'newProject' is the project data that gets sent to us.
-    // We just add it to our database context.
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null)
+    {
+        return Results.Unauthorized();
+    }
+    
+    newProject.UserId = userId;
+
     db.Projects.Add(newProject);
-
-    // This saves all the pending changes to the actual database file.
     await db.SaveChangesAsync();
-
-    // We send back the project that was just created, along with a "201 Created" status.
     return Results.Created($"/api/projects/{newProject.Id}", newProject);
-});
+}).RequireAuthorization();
 
-// This endpoint listens for PUT requests to update an existing project.
-// The "{id}" part means the ID of the project to update will be in the URL.
-app.MapPut("/api/projects/{id}", async (int id, Project updatedProject, ProjectDbContext db) =>
+// PUT to update a project, only if the user owns it.
+app.MapPut("/api/projects/{id}", async (int id, Project updatedProject, ProjectDbContext db, ClaimsPrincipal user) =>
 {
-    // First, find the original project in the database using the ID from the URL.
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
     var projectToUpdate = await db.Projects.FindAsync(id);
 
-    // If we can't find a project with that ID, send back a "Not Found" error.
-    if (projectToUpdate is null)
+    if (projectToUpdate is null) return Results.NotFound();
+    
+    // Security check
+    if (projectToUpdate.UserId != userId)
     {
-        return Results.NotFound();
+        return Results.Forbid();
     }
 
-    // Now, update the properties of the project we found with the new data.
     projectToUpdate.Title = updatedProject.Title;
     projectToUpdate.Description = updatedProject.Description;
     projectToUpdate.Technologies = updatedProject.Technologies;
     projectToUpdate.GitHubUrl = updatedProject.GitHubUrl;
     projectToUpdate.LiveUrl = updatedProject.LiveUrl;
 
-    // Save the changes to the database.
     await db.SaveChangesAsync();
-
-    // Send back a "No Content" response, which is standard for a successful update.
     return Results.NoContent();
-});
+}).RequireAuthorization();
 
-// This endpoint listens for DELETE requests to remove a project.
-// Like the update endpoint, it uses the project's ID in the URL.
-app.MapDelete("/api/projects/{id}", async (int id, ProjectDbContext db) =>
+// DELETE a project, only if the user owns it.
+app.MapDelete("/api/projects/{id}", async (int id, ProjectDbContext db, ClaimsPrincipal user) =>
 {
-    // First, we find the project we want to delete.
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
     var projectToDelete = await db.Projects.FindAsync(id);
 
-    // If it exists, we remove it.
-    if (projectToDelete is not null)
+    if (projectToDelete is null) return Results.NotFound();
+
+    // Security check
+    if (projectToDelete.UserId != userId)
     {
-        db.Projects.Remove(projectToDelete);
-        // And then we save the change to the database.
-        await db.SaveChangesAsync();
-        // Send back a "No Content" response to show it worked.
-        return Results.NoContent();
+        return Results.Forbid();
     }
 
-    // If we couldn't find a project with that ID, send back a "Not Found" error.
-    return Results.NotFound();
-});
+    db.Projects.Remove(projectToDelete);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+}).RequireAuthorization();
 
+
+// Run the app.
 app.Run();
 
 
-// --- "DEFINITION" SECTION ---
-// All class definitions are moved to the bottom of the file.
-
-// This is what a single "Project" will look like in the database.
+// --- My Data Models ---
 public class Project
 {
-    public int Id { get; set; } // a simple ID for each project
+    public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    // just gonna store the tech stack as a string like "C#, .NET, HTML"
     public string Technologies { get; set; } = string.Empty; 
     public string GitHubUrl { get; set; } = string.Empty;
     public string LiveUrl { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
+    public IdentityUser? User { get; set; }
 }
 
-// This is how my app talks to the database.
-public class ProjectDbContext(DbContextOptions<ProjectDbContext> options) : DbContext(options)
+public class ProjectDbContext : IdentityDbContext
 {
+    public ProjectDbContext(DbContextOptions<ProjectDbContext> options) : base(options) { }
     public DbSet<Project> Projects { get; set; }
 }
 
-// This empty class definition is the hint for our 'dotnet ef' tool.
-// By placing it here, it doesn't break the action code above.
 public partial class Program { }
