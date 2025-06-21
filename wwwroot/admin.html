@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Projects</title>
+    <!-- We use the same stylesheet as the main page -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Manage Portfolio Projects</h1>
+        <a href="/">View Public Site</a>
+    </header>
+
+    <main>
+        <!-- Form for Adding and Editing Projects -->
+        <form id="project-form">
+            <input type="hidden" id="project-id"> <!-- To store the ID when editing -->
+            <div>
+                <label for="title">Title</label>
+                <input type="text" id="title" required>
+            </div>
+            <div>
+                <label for="description">Description</label>
+                <textarea id="description" rows="3" required></textarea>
+            </div>
+            <div>
+                <label for="technologies">Technologies (comma-separated)</label>
+                <input type="text" id="technologies" required>
+            </div>
+            <div>
+                <label for="github-url">GitHub URL</label>
+                <input type="url" id="github-url" required>
+            </div>
+            <div>
+                <label for="live-url">Live Demo URL</label>
+                <input type="url" id="live-url">
+            </div>
+            <button type="submit">Save Project</button>
+            <button type="button" id="cancel-edit" style="display:none;">Cancel Edit</button>
+        </form>
+
+        <hr>
+
+        <!-- List of Existing Projects -->
+        <h2>Existing Projects</h2>
+        <div id="existing-projects-list">
+            <!-- Admin-specific project list will be loaded here by JavaScript -->
+        </div>
+    </main>
+
+    <!-- This links to the JavaScript file that makes the page work -->
+    <script src="admin.js"></script> 
+</body>
+</html>

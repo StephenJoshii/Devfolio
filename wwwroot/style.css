@@ -1,19 +1,26 @@
 /* --- Google Font Import --- */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-/* --- CSS Variables for Easy Customization --- */
+
 :root {
-    --bg-color: #f8f9fa;
+    --bg-color: #f7f7f9;
     --card-bg: #ffffff;
-    --text-color: #212529;
-    --primary-color: #007bff;
-    --light-gray: #e9ecef;
-    --shadow-color: rgba(0, 0, 0, 0.08);
+    --text-color: #333;
+    --heading-color: #111;
+    --primary-color: #4f46e5; 
+    --primary-hover: #4338ca;
+    --light-gray: #e5e7eb;
+    --gray-text: #6b7280;
+    --shadow-color: rgba(79, 70, 229, 0.1);
+    --danger-color: #ef4444;
+    --danger-hover: #dc2626;
+    --warning-color: #f59e0b;
+    --warning-hover: #d97706;
 }
 
 /* --- General Body and Typography --- */
 body {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Inter', sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
@@ -29,10 +36,14 @@ header {
 h1 {
     font-size: 2.5rem;
     font-weight: 600;
-    color: var(--text-color);
+    color: var(--heading-color);
 }
 
-/* --- Main Project Grid Layout --- */
+h2 {
+    color: var(--heading-color);
+}
+
+/* --- Main Project Grid Layout (Public Page) --- */
 #project-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -41,12 +52,12 @@ h1 {
     margin: 0 auto;
 }
 
-/* --- The Project Card Styling --- */
+/* --- The Project Card Styling (Public Page) --- */
 .project-card {
     background-color: var(--card-bg);
     border: 1px solid var(--light-gray);
     border-radius: 12px;
-    box-shadow: 0 5px 15px var(--shadow-color);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     padding: 1.5rem 2rem;
     display: flex;
     flex-direction: column;
@@ -55,7 +66,7 @@ h1 {
 
 .project-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 12px 25px var(--shadow-color);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.07);
 }
 
 .project-card h2 {
@@ -65,12 +76,11 @@ h1 {
 }
 
 .project-card p {
-    flex-grow: 1; /* This makes all cards the same height */
+    flex-grow: 1;
     margin-bottom: 1.5rem;
-    color: #495057;
+    color: var(--gray-text);
 }
 
-/* --- Tags/Technologies --- */
 .project-card .tags {
     margin-bottom: 1.5rem;
 }
@@ -78,16 +88,14 @@ h1 {
 .project-card .tag {
     display: inline-block;
     background-color: var(--light-gray);
-    color: var(--text-color);
-    border-radius: 16px; /* Pill shape */
+    color: var(--heading-color);
+    border-radius: 16px;
     padding: 0.3rem 0.8rem;
     font-size: 0.8rem;
-    font-weight: 600;
-    margin-right: 0.5rem;
-    margin-bottom: 0.5rem;
+    font-weight: 500;
+    margin: 0.25rem 0.25rem 0.25rem 0;
 }
 
-/* --- GitHub and Live Demo Links --- */
 .project-card .links a {
     text-decoration: none;
     color: var(--primary-color);
@@ -97,6 +105,130 @@ h1 {
 }
 
 .project-card .links a:hover {
-    color: #0056b3; /* A darker blue on hover */
+    color: var(--primary-hover);
     text-decoration: underline;
+}
+
+/* --- Admin Page Specific Styles --- */
+main {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+#project-form {
+    background-color: var(--card-bg);
+    padding: 2.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--light-gray);
+    margin-bottom: 2rem;
+}
+
+#project-form div {
+    margin-bottom: 1.5rem;
+}
+
+#project-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--heading-color);
+}
+
+#project-form input[type="text"],
+#project-form input[type="url"],
+#project-form textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#project-form input:focus,
+#project-form textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--shadow-color);
+}
+
+#project-form button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.8rem 1.75rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+#project-form button:hover {
+    background-color: var(--primary-hover);
+}
+
+#project-form #cancel-edit {
+    background-color: var(--gray-text);
+    margin-left: 0.5rem;
+}
+
+#project-form #cancel-edit:hover {
+    background-color: #4b5563;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--light-gray);
+    margin: 3rem 0;
+}
+
+.project-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    background-color: var(--card-bg);
+}
+
+.project-item strong {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.project-item p {
+    margin: 0.25rem 0 0 0;
+    color: var(--gray-text);
+    font-size: 0.9rem;
+}
+
+.project-item button {
+    margin-left: 0.5rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.project-item .edit-btn {
+    background-color: var(--warning-color);
+    color: white;
+}
+.project-item .edit-btn:hover {
+    background-color: var(--warning-hover);
+}
+
+.project-item .delete-btn {
+    background-color: var(--danger-color);
+    color: white;
+}
+.project-item .delete-btn:hover {
+    background-color: var(--danger-hover);
 }
