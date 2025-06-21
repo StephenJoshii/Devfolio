@@ -72,6 +72,26 @@ app.MapPut("/api/projects/{id}", async (int id, Project updatedProject, ProjectD
     return Results.NoContent();
 });
 
+// This endpoint listens for DELETE requests to remove a project.
+// Like the update endpoint, it uses the project's ID in the URL.
+app.MapDelete("/api/projects/{id}", async (int id, ProjectDbContext db) =>
+{
+    // First, we find the project we want to delete.
+    var projectToDelete = await db.Projects.FindAsync(id);
+
+    // If it exists, we remove it.
+    if (projectToDelete is not null)
+    {
+        db.Projects.Remove(projectToDelete);
+        // And then we save the change to the database.
+        await db.SaveChangesAsync();
+        // Send back a "No Content" response to show it worked.
+        return Results.NoContent();
+    }
+
+    // If we couldn't find a project with that ID, send back a "Not Found" error.
+    return Results.NotFound();
+});
 
 app.Run();
 
