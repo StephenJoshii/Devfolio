@@ -3,50 +3,81 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Get references to all our HTML elements ---
     const projectForm = document.getElementById('project-form');
     const projectList = document.getElementById('existing-projects-list');
-
-    // Form fields
-    const projectIdInput = document.getElementById('project-id');
     const titleInput = document.getElementById('title');
     const descriptionInput = document.getElementById('description');
     const technologiesInput = document.getElementById('technologies');
     const githubUrlInput = document.getElementById('github-url');
     const liveUrlInput = document.getElementById('live-url');
-
-    // Buttons
+    const projectIdInput = document.getElementById('project-id');
     const cancelEditBtn = document.getElementById('cancel-edit');
+    const publicLink = document.getElementById('public-link'); // <-- Get the link
 
-    // --- Function to fetch and display all projects ---
+    // --- State to hold current user info ---
+    let currentUser = null;
+
+    // --- Function to get the currently logged-in user ---
+    const getCurrentUser = async () => {
+        try {
+            const response = await fetch('/api/me', {
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include' 
+            });
+            if (response.ok) {
+                currentUser = await response.json();
+                
+                // --- THE FIX ---
+                // Once we know the user, update the public link's href attribute.
+                if(publicLink) {
+                    publicLink.href = `/index.html?user=${currentUser.userId}`;
+                }
+                
+                loadProjects(); // Then, load their projects
+            } else {
+                projectList.innerHTML = `<p>Your session might have expired. Please <a href="/auth.html">log in again</a>.</p>`;
+                projectForm.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Failed to get user info', error);
+            projectList.innerHTML = `<p>An error occurred. Please <a href="/auth.html">try logging in again</a>.</p>`;
+        }
+    };
+    
+    // --- Function to fetch and display the user's projects ---
     const loadProjects = async () => {
-        // Fetch data from our GET endpoint
-        const response = await fetch('/api/projects');
+        if (!currentUser || !currentUser.userId) return; 
+
+        const response = await fetch(`/api/users/${currentUser.userId}/projects`);
         const projects = await response.json();
 
-        // Clear the current list
-        projectList.innerHTML = '';
+        projectList.innerHTML = ''; 
 
-        projects.forEach(project => {
-            const projectElement = document.createElement('div');
-            projectElement.className = 'project-item'; // We can style this later
-            projectElement.innerHTML = `
-                <div>
-                    <strong>${project.title}</strong>
-                    <p>${project.description}</p>
-                </div>
-                <div>
-                    <button class="edit-btn" data-id="${project.id}">Edit</button>
-                    <button class="delete-btn" data-id="${project.id}">Delete</button>
-                </div>
-            `;
-            projectList.appendChild(projectElement);
-        });
+        if (projects.length === 0) {
+             projectList.innerHTML = '<p>You haven\'t added any projects yet. Use the form above to get started!</p>';
+        } else {
+            projects.forEach(project => {
+                const projectElement = document.createElement('div');
+                projectElement.className = 'project-item';
+                projectElement.innerHTML = `
+                    <div>
+                        <strong>${project.title}</strong>
+                        <p>${project.description}</p>
+                    </div>
+                    <div>
+                        <button class="edit-btn" data-id="${project.id}">Edit</button>
+                        <button class="delete-btn" data-id="${project.id}">Delete</button>
+                    </div>
+                `;
+                projectList.appendChild(projectElement);
+            });
+        }
     };
 
     // --- Function to handle form submission (Create or Update) ---
     projectForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Stop the form from reloading the page
-
+        e.preventDefault();
         const id = projectIdInput.value;
         const projectData = {
+            id: id ? parseInt(id) : 0, 
             title: titleInput.value,
             description: descriptionInput.value,
             technologies: technologiesInput.value,
@@ -56,40 +87,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let response;
         if (id) {
-            // If there's an ID, we're updating (PUT request)
             response = await fetch(`/api/projects/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify(projectData)
             });
         } else {
-            // If there's no ID, we're creating (POST request)
             response = await fetch('/api/projects', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify(projectData)
             });
         }
 
         if (response.ok) {
             resetForm();
-            loadProjects(); // Reload the list to show the changes
+            loadProjects(); 
         } else {
-            alert('Something went wrong!');
+            alert('Save failed! Ensure you are logged in and all fields are correct.');
         }
     });
     
-    // --- Event listener for the whole list (to handle edit/delete clicks) ---
+    // --- Event listener for edit/delete clicks ---
     projectList.addEventListener('click', async (e) => {
         const target = e.target;
         const id = target.dataset.id;
 
         if (target.classList.contains('delete-btn')) {
-            // If the delete button was clicked
             if (confirm('Are you sure you want to delete this project?')) {
-                const response = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+                const response = await fetch(`/api/projects/${id}`, { 
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
                 if (response.ok) {
-                    loadProjects(); // Reload the list
+                    loadProjects();
                 } else {
                     alert('Failed to delete project.');
                 }
@@ -97,36 +130,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (target.classList.contains('edit-btn')) {
-            // If the edit button was clicked
-            // Fetch the single project's data to populate the form
-            const response = await fetch(`/api/projects`); // We'll just find it in the list for now
+            const response = await fetch(`/api/users/${currentUser.userId}/projects`);
             const projects = await response.json();
             const projectToEdit = projects.find(p => p.id == id);
             
             if (projectToEdit) {
-                // Fill the form with the project's data
                 projectIdInput.value = projectToEdit.id;
                 titleInput.value = projectToEdit.title;
                 descriptionInput.value = projectToEdit.description;
                 technologiesInput.value = projectToEdit.technologies;
                 githubUrlInput.value = projectToEdit.gitHubUrl;
                 liveUrlInput.value = projectToEdit.liveUrl;
-                cancelEditBtn.style.display = 'inline-block'; // Show the cancel button
+                cancelEditBtn.style.display = 'inline-block';
             }
         }
     });
     
-    // --- Function to clear the form ---
+    // --- Helper function to clear the form ---
     const resetForm = () => {
         projectForm.reset();
         projectIdInput.value = '';
         cancelEditBtn.style.display = 'none';
     };
 
-    // --- Event listener for the Cancel Edit button ---
     cancelEditBtn.addEventListener('click', resetForm);
 
     // --- Initial Load ---
-    // Load all the projects as soon as the page opens
-    loadProjects();
+    getCurrentUser();
 });
