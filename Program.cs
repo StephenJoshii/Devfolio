@@ -162,3 +162,4 @@ public class ProjectDbContext : IdentityDbContext
 }
 
 public partial class Program { }
+// end of project
